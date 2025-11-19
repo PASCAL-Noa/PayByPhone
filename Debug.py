@@ -3,12 +3,12 @@ import datetime
 class Debug:
 
     COLORS = {
-        "RESET": "\033[0m",
-        "INFO": "\033[36m",
-        "DEBUG": "\033[35m",
-        "WARNING": "\033[33m",
-        "ERROR": "\033[31m",
-        "SUCCESS": "\033[32m",
+        "RESET":    "\033[0m",
+        "INFO":     "\033[36m",
+        "DEBUG":    "\033[35m",
+        "WARNING":  "\033[33m",
+        "ERROR":    "\033[31m",
+        "SUCCESS":  "\033[32m",
     }
 
     def __init__(self, debug=False, use_colors=True, prefix="", silent=False):
