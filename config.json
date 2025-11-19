@@ -1,0 +1,11 @@
+{
+  "accounts": [
+    {
+      "phone": "0123456789",
+      "password": "0123456789abcdef",
+      "plate": "FR-690-07",
+      "location": "Lyon",
+      "use_handicap": true
+    }
+  ]
+}
