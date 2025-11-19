@@ -1,4 +1,5 @@
 import time
+
 from selenium import webdriver
 from selenium.webdriver.chrome.service import Service
 from webdriver_manager.chrome import ChromeDriverManager
@@ -9,17 +10,17 @@ from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.chrome.options import Options
 
 from Debug import Debug
+from flutter_utils import FlutterUtils
 
-
-class PayByPhoneBot:
+class PayByPhoneBot(FlutterUtils):
 
     def __init__(self):
         self.log = Debug(debug=True, prefix="paybyphone")
 
         chrome_options = Options()
         chrome_options.add_argument("--user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64)")
-        chrome_options.add_argument("--window-size=412,800")
-
+        chrome_options.add_argument("--window-size=412,900")
+        chrome_options.add_argument("--disable-application-cache")
 
         self.driver = webdriver.Chrome(
             service=Service(ChromeDriverManager().install()),
@@ -29,43 +30,6 @@ class PayByPhoneBot:
         self.wait = WebDriverWait(self.driver, 20)
         self.log.success("WebDriver initialisé.")
 
-    def inject_coords(self):
-        try:
-            with open("coords.js", "r", encoding="utf8") as f:
-                script = f.read()
-
-            self.driver.execute_script(script)
-            self.log.debug("coords.js injecté.")
-            return True
-
-        except Exception as e:
-            self.log.error(f"Erreur injection coords.js : {e}")
-            return False
-
-
-    def perform_flutter_action(self, x, y, wait_time=0.2):
-        self.log.info(f"Tentative de clic sur ({x}, {y}) via CDP...")
-
-        if not self.click_cdp(x, y):
-            return False
-        time.sleep(wait_time)
-        self.inject_coords()
-        return True
-
-    def input_flutter_field(self, x, y, value, wait_time=0.2):
-        self.log.info(f"Tentative de saisie dans le champ ({x}, {y})")
-
-        if not self.click_cdp(x, y):
-            return False
-
-        try:
-            self.driver.switch_to.active_element.send_keys(value)
-            self.log.success(f"Valeur saisie")
-            time.sleep(wait_time)
-            return True
-        except Exception as e:
-            self.log.error(f"Échec de la saisie : {e}")
-            return False
 
     def accept_cookies(self):
         try:
@@ -80,62 +44,13 @@ class PayByPhoneBot:
 
     def click_stationner(self):
         try:
-            btn = self.wait.until(
-                EC.element_to_be_clickable((By.XPATH, "//a[contains(., 'Stationner')]"))
-            )
+            btn = self.wait.until(EC.element_to_be_clickable((By.XPATH, "//a[contains(., 'Stationner')]")))
             btn.click()
             self.log.info("Bouton 'Stationner' cliqué.")
         except:
             self.log.error("Impossible de cliquer sur 'Stationner'.")
             return False
         return True
-
-
-    def wait_for_flutter_canvas(self):
-        self.log.debug("Attente du chargement du conteneur Flutter ('flt-glass-pane')...")
-        try:
-            self.wait.until(
-                EC.presence_of_element_located((By.TAG_NAME, "flt-glass-pane"))
-            )
-            self.log.success("Conteneur Flutter détecté.")
-            time.sleep(1)
-            return True
-        except Exception as e:
-            self.log.error(f"Erreur: 'flt-glass-pane' non détecté après le délai.")
-            return False
-
-    def click_cdp(self, x_abs, y_abs):
-        if not self.wait_for_flutter_canvas():
-            self.log.error("Échec de la détection du conteneur Flutter. Annulation du clic CDP.")
-            return False
-
-        self.log.debug(f"Demande de clic CDP à ({x_abs},{y_abs}).")
-
-        try:
-            self.driver.execute_cdp_cmd('Input.dispatchMouseEvent', {
-                'type': 'mousePressed',
-                'x': x_abs,
-                'y': y_abs,
-                'button': 'left',
-                'clickCount': 1
-            })
-            time.sleep(0.05)
-
-            self.driver.execute_cdp_cmd('Input.dispatchMouseEvent', {
-                'type': 'mouseReleased',
-                'x': x_abs,
-                'y': y_abs,
-                'button': 'left',
-                'clickCount': 1
-            })
-
-            self.log.success(f"Clic CDP effectué sur ({x_abs},{y_abs}).")
-            time.sleep(0.2)
-            return True
-
-        except Exception as e:
-            self.log.error(f"Erreur clic CDP : {e}")
-            return False
 
     def login(self, phone, password):
         self.log.info("Ouverture de PayByPhone...")
@@ -148,54 +63,105 @@ class PayByPhoneBot:
         if not self.click_stationner():
             return False
 
-        self.accept_cookies()
         self.inject_coords()
+        self.accept_cookies()
 
         IGNOR_BUTTON_X      =   134
-        IGNOR_BUTTON_Y      =   606
+        IGNOR_BUTTON_Y      =   706
         COUNTRY_BUTTON_X    =    78
         COUNTRY_BUTTON_Y    =   271
-        CONNECT_X           =   247
-        CONNECT_Y           =   395
+        CONNECT_X           =   252
+        CONNECT_Y           =   573
         PHONE_FIELD_X       =   161
-        PHONE_FIELD_Y       =   129
+        PHONE_FIELD_Y       =   138
         MDP_FIELD_X         =   166
-        MDP_FIELD_Y         =   215
-        VALID_FORM_X        =   247
-        VALID_FORM_Y        =   606
+        MDP_FIELD_Y         =   223
+        VALID_FORM_X        =   258
+        VALID_FORM_Y        =   705
 
-
-        # 1. Clic ignorer
         if not self.perform_flutter_action( IGNOR_BUTTON_X,  IGNOR_BUTTON_Y):
             return False
-
-        # 2. Clic sur le bouton Pays
         if not self.perform_flutter_action(COUNTRY_BUTTON_X, COUNTRY_BUTTON_Y,):
             return False
-
-        # 3. Clic sur le bouton de Connexion
-        if not self.perform_flutter_action(
-                CONNECT_X, CONNECT_Y):
+        if not self.perform_flutter_action(CONNECT_X, CONNECT_Y):
             return False
-
-        # 4. Saisie du numéro de téléphone
-        if not self.input_flutter_field(
-                PHONE_FIELD_X, PHONE_FIELD_Y,phone):
+        if not self.input_flutter_field(PHONE_FIELD_X, PHONE_FIELD_Y,phone):
             return False
-
-        # 5. Saisie du mot de passe
         if not self.input_flutter_field(MDP_FIELD_X, MDP_FIELD_Y, password):
             return False
-
-        # 6. Se connecter
         if not self.perform_flutter_action(VALID_FORM_X, VALID_FORM_Y):
             return False
         self.log.success("EEEEEENFIN !!")
+        time.sleep(2)
         return True
 
 
-    def check_parking(self, plate):
-       pass
+    def activate_handicap_sequence(self, location):
+        self.search_tarif(location)
+        self.set_handicap_and_time()
+
+    def search_tarif(self, location):
+        SEARCH_FIELD_X  = 193
+        SEARCH_FIELD_Y  = 101
+        SEARCH_X        = 244
+        SEARCH_Y        = 705
+        SELECT_X        = 198
+        SELECT_Y        = 150
+        CAR_X           = 222
+        CAR_Y           = 550
+
+        if not self.perform_flutter_action(SEARCH_FIELD_X, SEARCH_FIELD_Y):
+            return False
+        if not self.input_flutter_field(SEARCH_FIELD_X, SEARCH_FIELD_Y, location):
+            return False
+        if not self.perform_flutter_action(SEARCH_X, SEARCH_Y):
+            return False
+        if not self.perform_flutter_action(SELECT_X, SELECT_Y):
+            return False
+        if not self.perform_flutter_action(CAR_X, CAR_Y):
+            return False
+
+        time.sleep(2)
+        return True
+
+    def set_handicap_and_time(self):
+        STEP1_X = 184
+        STEP1_Y = 503
+        STEP2_X = 190
+        STEP2_Y = 689
+        STEP3_X = 230
+        STEP3_Y = 625
+        STEP4_X = 413
+        STEP4_Y = 614
+        STEP5_X = 246
+        STEP5_Y = 683
+        STEP6_X = 258
+        STEP6_Y = 692
+        STEP7_X = 254
+        STEP7_Y = 730
+        STEP8_X = 249
+        STEP8_Y = 703
+
+        if not self.perform_flutter_action(STEP1_X, STEP1_Y):
+            return False
+        if not self.perform_flutter_action(STEP2_X, STEP2_Y):
+            return False
+        if not self.input_flutter_field(STEP3_X, STEP3_Y, 1):
+            return False
+        if not self.perform_flutter_action(STEP4_X, STEP4_Y):
+            return False
+        if not self.perform_flutter_action(STEP5_X, STEP5_Y):
+            return False
+        if not self.perform_flutter_action(STEP6_X, STEP6_Y):
+            return False
+        if not self.perform_flutter_action(STEP7_X, STEP7_Y):
+            return False
+        if not self.perform_flutter_action(STEP8_X, STEP8_Y):
+            return False
+
+        time.sleep(2)
+        return True
+
 
     def close(self):
         self.log.info("Fermeture du WebDriver.")
