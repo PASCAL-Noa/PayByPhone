@@ -22,6 +22,9 @@ class PayByPhoneBot(FlutterUtils):
         chrome_options.add_argument("--window-size=412,900")
         chrome_options.add_argument("--disable-application-cache")
 
+        prefs = {"profile.default_content_setting_values.geolocation": 1}
+        chrome_options.add_experimental_option("prefs", prefs)
+
         self.driver = webdriver.Chrome(
             service=Service(ChromeDriverManager().install()),
             options=chrome_options

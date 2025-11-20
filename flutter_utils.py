@@ -9,6 +9,10 @@ class FlutterUtils:
     avec les applications Web rendues par Flutter (via Canvas/CDP).
     """
 
+    def __init__(self):
+        self.driver = None
+        self.log = None
+
     def inject_coords(self):
         try:
             with open("coords.js", "r", encoding="utf8") as f:
