@@ -1,4 +1,6 @@
 import time
+import json
+from pathlib import Path
 
 from selenium import webdriver
 from selenium.webdriver.chrome.service import Service
@@ -12,18 +14,17 @@ from selenium.webdriver.chrome.options import Options
 from Debug import Debug
 from flutter_utils import FlutterUtils
 
+
 class PayByPhoneBot(FlutterUtils):
 
     def __init__(self):
-        self.log = Debug(debug=True, prefix="paybyphone")
+        super().__init__()
+        self.log = Debug(debug=False, prefix="paybyphone")
 
         chrome_options = Options()
         chrome_options.add_argument("--user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64)")
         chrome_options.add_argument("--window-size=412,900")
         chrome_options.add_argument("--disable-application-cache")
-
-        prefs = {"profile.default_content_setting_values.geolocation": 1}
-        chrome_options.add_experimental_option("prefs", prefs)
 
         self.driver = webdriver.Chrome(
             service=Service(ChromeDriverManager().install()),
@@ -32,6 +33,23 @@ class PayByPhoneBot(FlutterUtils):
 
         self.wait = WebDriverWait(self.driver, 20)
         self.log.success("WebDriver initialisé.")
+
+
+    def update_parking_time(self, phone, config_file_name, new_timestamp):
+        config_path = Path(config_file_name)
+        with open(config_path, 'r', encoding='utf-8') as f:
+            cfg = json.load(f)
+
+        for acc in cfg['accounts']:
+            if acc.get('phone') == phone:
+                acc['last_start_time'] = new_timestamp
+                break
+
+        with open(config_path, 'w', encoding='utf-8') as f:
+            json.dump(cfg, f, indent=4)
+
+        self.log.success(f"Token d'état mis à jour à {new_timestamp}.")
+        return True
 
 
     def accept_cookies(self):
@@ -45,6 +63,7 @@ class PayByPhoneBot(FlutterUtils):
         except:
             self.log.debug("Aucune fenêtre cookies détectée.")
 
+
     def click_stationner(self):
         try:
             btn = self.wait.until(EC.element_to_be_clickable((By.XPATH, "//a[contains(., 'Stationner')]")))
@@ -54,6 +73,7 @@ class PayByPhoneBot(FlutterUtils):
             self.log.error("Impossible de cliquer sur 'Stationner'.")
             return False
         return True
+
 
     def login(self, phone, password):
         self.log.info("Ouverture de PayByPhone...")
@@ -82,13 +102,13 @@ class PayByPhoneBot(FlutterUtils):
         VALID_FORM_X        =   258
         VALID_FORM_Y        =   705
 
-        if not self.perform_flutter_action( IGNOR_BUTTON_X,  IGNOR_BUTTON_Y):
+        if not self.perform_flutter_action(IGNOR_BUTTON_X, IGNOR_BUTTON_Y):
             return False
-        if not self.perform_flutter_action(COUNTRY_BUTTON_X, COUNTRY_BUTTON_Y,):
+        if not self.perform_flutter_action(COUNTRY_BUTTON_X, COUNTRY_BUTTON_Y):
             return False
         if not self.perform_flutter_action(CONNECT_X, CONNECT_Y):
             return False
-        if not self.input_flutter_field(PHONE_FIELD_X, PHONE_FIELD_Y,phone):
+        if not self.input_flutter_field(PHONE_FIELD_X, PHONE_FIELD_Y, phone):
             return False
         if not self.input_flutter_field(MDP_FIELD_X, MDP_FIELD_Y, password):
             return False
@@ -99,9 +119,15 @@ class PayByPhoneBot(FlutterUtils):
         return True
 
 
-    def activate_handicap_sequence(self, location):
-        self.search_tarif(location)
-        self.set_handicap_and_time()
+    def activate_handicap_sequence(self, location, use_handicap):
+        
+        if not self.search_tarif(location):
+            return False
+
+        if not self.set_parking_options(use_handicap):
+            return False
+
+        return True
 
     def search_tarif(self, location):
         SEARCH_FIELD_X  = 193
@@ -127,7 +153,7 @@ class PayByPhoneBot(FlutterUtils):
         time.sleep(2)
         return True
 
-    def set_handicap_and_time(self):
+    def set_parking_options(self, use_handicap):
         STEP1_X = 184
         STEP1_Y = 503
         STEP2_X = 190
@@ -145,26 +171,36 @@ class PayByPhoneBot(FlutterUtils):
         STEP8_X = 249
         STEP8_Y = 703
 
-        if not self.perform_flutter_action(STEP1_X, STEP1_Y):
-            return False
+        if use_handicap:
+            self.log.info("Activation du mode stationnement handicapé.")
+            if not self.perform_flutter_action(STEP1_X, STEP1_Y):
+                return False
+
+        # Pas de gestion du cas si non handicapé, flemme de payé ;)
+
         if not self.perform_flutter_action(STEP2_X, STEP2_Y):
             return False
+
         if not self.input_flutter_field(STEP3_X, STEP3_Y, 1):
             return False
+
         if not self.perform_flutter_action(STEP4_X, STEP4_Y):
             return False
+
         if not self.perform_flutter_action(STEP5_X, STEP5_Y):
             return False
+
         if not self.perform_flutter_action(STEP6_X, STEP6_Y):
             return False
+
         if not self.perform_flutter_action(STEP7_X, STEP7_Y):
             return False
+
         if not self.perform_flutter_action(STEP8_X, STEP8_Y):
             return False
 
         time.sleep(2)
         return True
-
 
     def close(self):
         self.log.info("Fermeture du WebDriver.")
