@@ -1,0 +1,12 @@
+{
+    "accounts": [
+        {
+            "phone": "0744400512",
+            "password": "123456",
+            "location": "75008",
+            "plate": "B",
+            "use_handicap": true,
+            "last_start_time": 1763761037
+        }
+    ]
+}
