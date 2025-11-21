@@ -24,12 +24,15 @@ class Debug:
         if level == "DEBUG" and not self.debug_enabled:
             return
 
+        is_error_level = (level == "ERROR" or level == "CRITICAL")
+        if not self.debug_enabled and not is_error_level:
+            return
+
         tag = f"[{level}]"
         if self.use_colors and level in self.COLORS:
             tag = f"{self.COLORS[level]}{tag}{self.COLORS['RESET']}"
 
         prefix = f"{self.prefix} " if self.prefix else ""
-
         print(f"{tag} {prefix}{message}")
 
 
